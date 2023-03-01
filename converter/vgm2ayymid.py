@@ -3,7 +3,7 @@
 
 import os, sys, pdb, struct
 from argparse import ArgumentParser
-from lib.mid_writer import AyyMidiWriter
+from ayymidi.mid_writer import AyyMidiWriter
 
 VGM_TIMEBASE = 16000
 VGM_TEMPO = 165

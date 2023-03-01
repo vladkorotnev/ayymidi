@@ -3,7 +3,7 @@
 
 import os, sys, pdb, struct
 from argparse import ArgumentParser
-from lib.mid_writer import AyyMidiWriter
+from ayymidi.mid_writer import AyyMidiWriter
 
 # PSG uses 20ms delays or multiples of 80ms delays
 # So let's make one tick 10 ms
