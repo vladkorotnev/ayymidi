@@ -1,6 +1,7 @@
 # AYYMIDI protocol
 
 * 2023/02/28: draft v1.0
+* 2023/03/14: draft v1.0.1: remove sequential write commands as they don't give any size or speed benifit over repeated pair write commands
 
 ## Abstract
 
@@ -32,20 +33,4 @@ All of the following SysEx examples do not show the Manufacturer ID prefix and t
         * 1 bit: MS bit of the register value
     * Second byte:
         * Register value AND 0x7F
-* Can be followed by any write command
-
-## Writing to sequential registers
-
-* 3+ bytes payload:
-    * First byte:
-        * 1 bit: forbidden
-        * 2 bits: command (`WRITESEQ` == 0x0 == 0b00, or `WRITEREV` == 0x1 == 0b01)
-        * 4 bits: AY register number
-        * 1 bit: unused
-    * Second byte:
-        * 4 bits: unused
-        * 4 bits: MS nibble of the value
-    * Third byte:
-        * 4 bits: unused
-        * 4 bits: LS nibble of the value
-* Can be followed by pairs of 2 bytes to write to next registers in case of `WRITESEQ`, or previous registers in case of `WRITEREV`.
+* Can be followed by any other command

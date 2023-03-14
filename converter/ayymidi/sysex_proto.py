@@ -5,8 +5,8 @@ import struct
 
 MFGID_AYYM_MSG = 0x7A
 
-AYYM_CMD_WRITESEQ = 0x0
-AYYM_CMD_WRITEREV = 0x1
+#reserved = 0x0
+#reserved = 0x1
 AYYM_CMD_WRITEPAIR = 0x2
 AYYM_CMD_SETCLOCK = 0x3
 
@@ -33,53 +33,7 @@ def regi_enc_pair(accum):
             (accum[1] & 0x7F)
         ]
 def regi_accum_to_sysex_payload(accum):
-    if len(accum) == 2:
-        return bytes(regi_enc_pair(accum))
-    elif len(accum) > 2:
-        seq_fwd = all(n - p == 1 for (p, n) in zip(accum[0::2], accum[2::2]))
-        seq_bwd = all(p - n == 1 for (p, n) in zip(accum[0::2], accum[2::2]))
-        if seq_fwd:
-            rslt = [
-                (AYYM_CMD_WRITESEQ << 5) | ((accum[0] & 0xF) << 1), 
-            ]
-            for valu in accum[1::2]: # then repeatedly 2 bytes of top/bottom nibble of each sequential register
-                rslt.append((valu & 0xF0) >> 4)
-                rslt.append(valu & 0x0F)
-            return bytes(rslt)
-        elif seq_bwd:
-            rslt = [
-                (AYYM_CMD_WRITEREV << 5) | ((accum[0] & 0xF) << 1), 
-            ]
-            for valu in accum[1::2]: # then repeatedly 2 bytes of top/bottom nibble of each sequential register
-                rslt.append((valu & 0xF0) >> 4)
-                rslt.append(valu & 0x0F)
-            return bytes(rslt)
-        else:
-            # No specific sequence, so just write in pairs
-            rslt = []
-            for regi, valu in zip(accum[0::2], accum[1::2]):
-                rslt.extend(regi_enc_pair([regi, valu]))
-            return bytes(rslt)
-
-
-def wrap_sysex_payload_bytes_old(accum):
     rslt = []
-    rslt.append(len(accum))
-    i = 0
-    topbits = 0x0
-    for b in accum:
-        rslt.append(b & 0x7F)
-        topbits <<= 1
-        topbits |= (b & 0x80) >> 7
-        i += 1
-        if i == 7: # every 7 bytes, add 1 byte that contains top bits of each byte (because midi range 00..7F)
-            rslt.append(topbits)
-            topbits = 0
-            i = 0
-    rslt.append(topbits)
-    cksum = 0
-    for b in accum:
-        cksum += b
-    cksum &= 0x7F
-    rslt.append(cksum)
-    return rslt
+    for regi, valu in zip(accum[0::2], accum[1::2]):
+        rslt.extend(regi_enc_pair([regi, valu]))
+    return bytes(rslt)
