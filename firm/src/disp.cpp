@@ -47,12 +47,13 @@ PROGMEM const uint8_t MODE_ICON_ACB[] = {
 
 static bool is_home_screen = false;
 static volatile bool is_chswap = false;
-static TimeOut_t last_midi_in;;
+static TimeOut_t last_midi_in;
 static TickType_t remain_lit = 0;
 
 void _disp_task(void*);
 
 void disp_begin() {
+    inf_log(F("Setup LCD"));
     lcd.begin();
 
     lcd.createChar(CHAR_ICON_IN_OFF, IN_ICON_OFF);
@@ -109,6 +110,7 @@ void disp_ch_swap(bool is_swap) {
 
 void disp_show_volume() {
     if(!is_home_screen) return;
+    dbg_log(F("[DISP] show_volume"));
 
     static char buf[6] = { 0 };
     uint8_t lv_a = status_regi_get_blocking(AY_REGI_LVL_A) & 0x0F;
@@ -123,6 +125,8 @@ void disp_show_volume() {
 
 void disp_show_env() {
     if(!is_home_screen) return;
+    dbg_log(F("[DISP] show_env"));
+
     lcd.setCursor(8,0);
     static char buf[5] = { 0 };
     uint16_t env = (status_regi_get_blocking(AY_REGI_ENV_ROUGH) << 8) | status_regi_get_blocking(AY_REGI_ENV_FINE);
@@ -132,6 +136,7 @@ void disp_show_env() {
 
 void disp_show_sta() {
     if(!is_home_screen) return;
+    dbg_log(F("[DISP] show_sta"));
 
     lcd.setCursor(14, 0);
     lcd.write(is_chswap ? CHAR_ICON_CHSWAP : CHAR_ICON_NO_CHSWAP);
@@ -145,6 +150,7 @@ void disp_show_sta() {
 
 void disp_show_tone(uint8_t idx) {
     if(!is_home_screen || idx > 2) return;
+    dbg_log(F("[DISP] show_tone %u"), idx);
 
     uint16_t tone = ((status_regi_get_blocking(1 + idx) & 0xF) << 8) | status_regi_get_blocking(idx);
     static char buf[4] = {0};
@@ -171,7 +177,7 @@ void disp_show_tone(uint8_t idx) {
 
 void disp_show_noise() {
     if(!is_home_screen) return;
-
+    dbg_log(F("[DISP] show_noise"));
     uint8_t noise = status_regi_get_blocking(AY_REGI_NOISE) & 0x1F;
     static char buf[3] = { 0 };
     sprintf(buf, "%02x", noise);
@@ -202,11 +208,13 @@ void disp_rst_home() {
 void _disp_task(void* pvParameters) {
     __UNUSED_ARG(pvParameters);
 
+    inf_log(F("DISP_TASK booted"));
     disp_intro();
     vTaskDelay(pdMS_TO_TICKS(2000));
-
+    inf_log(F("DISP_TASK wait for regi write"));
     status_wait_change_regi(); // wait until any midi message or something does a register write
     disp_rst_home(); // show whole home screen
+    inf_log(F("DISP_TASK home ok"));
 
     for(;;) {
         // infinitely do partial updates
@@ -251,4 +259,6 @@ void _disp_task(void* pvParameters) {
 #endif
         vTaskDelay(pdMS_TO_TICKS(16)); // roughly 60 fps should be enough
     }
+
+    err_log(F("DISP_TASK end!!!"));
 }

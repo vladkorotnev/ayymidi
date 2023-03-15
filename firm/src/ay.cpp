@@ -1,17 +1,30 @@
 #include <ay.h>
 #include <status.h>
+#include <util.h>
 #include <Arduino.h>
+#ifdef HAVE_FASTPWMPIN
+#include <FastPwmPin.h>
+#endif
 
+//
+// Based upon the code samples from https://habr.com/ru/post/392625/
+//
 
-void ay_set_clock(){
-  pinMode(3, OUTPUT);
-  TCCR2A = 0x23;
-  TCCR2B = 0x09;
-  OCR2A = 8;
-  OCR2B = 3; 
+void ay_set_clock(uint32_t clock){
+  #ifdef HAVE_FASTPWMPIN
+    FastPwmPin::enablePwmPin(3, clock, FASTPWMPIN_TOGGLE);
+  #else
+    // Legacy code for 1.777 MHz
+    err_log(F("Build without variable clock support!"));
+    pinMode(3, OUTPUT);
+    TCCR2A = 0x23;
+    TCCR2B = 0x09;
+    OCR2A = 8;
+    OCR2B = 3; 
+  #endif
 }
 
-void ay_out_internal(unsigned char port, unsigned char data){
+void ay_out_internal(uint8_t port, uint8_t data){
   PORTB = PORTB & B11111100;
 
   PORTC = port & B00001111;
@@ -61,7 +74,7 @@ void ay_reset(){
   taskEXIT_CRITICAL();
 }
 
-void ay_out(unsigned char port, unsigned char data){
+void ay_out(uint8_t port, uint8_t data){
   taskENTER_CRITICAL();
 
   ay_out_internal(port, data);

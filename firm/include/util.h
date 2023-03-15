@@ -2,6 +2,7 @@
 #define UTIL_H_
 
 #include <Arduino_FreeRTOS.h>
+#include <log.h>
 
 #define __UNUSED_ARG(x) (void) x;
 

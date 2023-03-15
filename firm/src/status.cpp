@@ -1,5 +1,6 @@
 #include <status.h>
 #include <semphr.h>
+#include <util.h>
 
 static volatile uint8_t register_dump[0x10] = { 0 };
 static volatile TaskHandle_t subscriber_task = nullptr;
@@ -17,8 +18,10 @@ inline void _setup_semaphore_if_needed() {
 
 regi_valu_tuple_t status_wait_change_regi() {
     uint32_t regi_valu_tuple = 0x0;
+    dbg_log(F("sts_wait_chg_regi: wait start"));
     subscriber_task = xTaskGetCurrentTaskHandle();
     xTaskNotifyWait(0x0, 0xFF, &regi_valu_tuple, portMAX_DELAY);
+    dbg_log(F("sts_wait_chg_regi: wait OVER"));
     return regi_valu_tuple;
 }
 
@@ -33,6 +36,8 @@ void status_regi_notify(uint8_t regi, uint8_t valu) {
             subscriber_task = nullptr;
         }
         xSemaphoreGive(dump_tbl_semaphore);
+    } else {
+        inf_log(F("sts_regi_notify: blocked >1ms while writing, abandon!"));
     }
 }
 

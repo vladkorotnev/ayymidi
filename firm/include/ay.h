@@ -3,8 +3,8 @@
 #include <stdint.h>
 
 void ay_reset();
-void ay_out(unsigned char port, unsigned char data);
-void ay_set_clock();
+void ay_out(uint8_t port, uint8_t data);
+void ay_set_clock(uint32_t clock);
 
 #define AY_REGI_TONE_A_FINE 0x0
 #define AY_REGI_TONE_A_COARSE 0x1

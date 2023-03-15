@@ -1,0 +1,3 @@
+[submodule "firm/lib/FastPwmPin"]
+	path = firm/lib/FastPwmPin
+	url = https://github.com/maxint-rd/FastPwmPin.git

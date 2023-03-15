@@ -11,7 +11,13 @@ struct MySettings : public midi::DefaultSettings
     static const unsigned BaudRate = MIDIIF_BAUD;
 };
 
+#ifndef USE_SOFTSERIAL
 MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, Serial, MIDI, MySettings);
+#else
+#include <SoftwareSerial.h>
+SoftwareSerial mySerial(10, 11);
+MIDI_CREATE_CUSTOM_INSTANCE(SoftwareSerial, mySerial, MIDI, MySettings);
+#endif
 
 static bool chswap_active = false;
 
@@ -116,9 +122,9 @@ void midi_on_sysex(byte* array, unsigned size) {
 
                 uint32_t clock = *((uint32_t*) &clock_bytes);
 
-                // TODO: set frequency and modes
-                ay_set_clock(); __UNUSED_ARG(clock); 
+                ay_set_clock(clock); 
                 ay_reset();
+                inf_log(F("MIDI I/F SET_CLOCK: Clock= %lu Hz, ACB= %u, ChSwap Active= %u"), clock, is_acb, chswap_active);
             }
             break;
 
@@ -129,7 +135,11 @@ void midi_on_sysex(byte* array, unsigned size) {
                 pkt_ptr += 1;
                 valu |= ayymidi_pkt[pkt_ptr] & 0x7F;
 
-                remap_channels_in_place(&regi, &valu);
+                dbg_log(F("MIDI I/F WRITE_PAIR: Reg=%01x Val=%02x"), regi, valu);
+                if(chswap_active) {
+                    remap_channels_in_place(&regi, &valu);
+                    dbg_log(F("MIDI I/F WRITE_PAIR ReMap: Reg=%01x Val=%02x"), regi, valu);
+                }
                 ay_out(regi, valu);
             }
             break;
@@ -140,16 +150,20 @@ void midi_on_sysex(byte* array, unsigned size) {
 }
 
 void midi_on_reset() {
+    inf_log(F("MIDI reset..."));
     ay_reset();
 }
 
 void _midi_task(void *pvParameters) {
     __UNUSED_ARG(pvParameters);
+    inf_log(F("MIDI I/F task run"));
     for(;;)
         MIDI.read();
+    err_log(F("MIDI I/F task end!!!!"));
 }
 
 void midi_begin() {
+    inf_log(F("MIDI I/F start"));
     MIDI.begin();
     MIDI.setHandleSystemExclusive(midi_on_sysex);
     MIDI.setHandleSystemReset(midi_on_reset);
