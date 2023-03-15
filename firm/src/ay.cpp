@@ -32,7 +32,7 @@ void ay_out_internal(unsigned char port, unsigned char data){
 }
 
 void ay_reset(){
-  portDISABLE_INTERRUPTS();
+  taskENTER_CRITICAL();
 
   pinMode(A0, OUTPUT); // D0
   pinMode(A1, OUTPUT);
@@ -52,19 +52,19 @@ void ay_reset(){
   
   pinMode(2, OUTPUT);
   digitalWrite(2, LOW);
-  vTaskDelay(pdMS_TO_TICKS(100));
+  delayMicroseconds(100);
   digitalWrite(2, HIGH);
-  vTaskDelay(pdMS_TO_TICKS(100));
+  delayMicroseconds(100);
 
   for (int i=0;i<16;i++) ay_out_internal(i,0);
 
-  portENABLE_INTERRUPTS();
+  taskEXIT_CRITICAL();
 }
 
 void ay_out(unsigned char port, unsigned char data){
-  portDISABLE_INTERRUPTS();
+  taskENTER_CRITICAL();
 
   ay_out_internal(port, data);
 
-  portENABLE_INTERRUPTS();
+  taskEXIT_CRITICAL();
 }

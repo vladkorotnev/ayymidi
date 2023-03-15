@@ -31,21 +31,22 @@ PROGMEM const uint8_t IN_ICON_ON[] = {
     0b00011
 };
 
-#define CHAR_ICON_ACB 2
+#define CHAR_ICON_CHSWAP 2
 PROGMEM const uint8_t MODE_ICON_ACB[] = {
-    0b01001,
-    0b10110,
-    0b11110,
-    0b10101,
-    0b01010,
-    0b01100,
-    0b01010,
-    0b01100
+    0b00000,
+    0b00100,
+    0b00010,
+    0b11111,
+    0b00000,
+    0b11111,
+    0b01000,
+    0b00100,
 };
 
-#define CHAR_ICON_ABC 0x20 // empty
+#define CHAR_ICON_NO_CHSWAP 0x20 // empty
 
 static bool is_home_screen = false;
+static volatile bool is_chswap = false;
 static TimeOut_t last_midi_in;;
 static TickType_t remain_lit = 0;
 
@@ -56,6 +57,7 @@ void disp_begin() {
 
     lcd.createChar(CHAR_ICON_IN_OFF, IN_ICON_OFF);
     lcd.createChar(CHAR_ICON_IN_ON, IN_ICON_ON);
+    lcd.createChar(CHAR_ICON_CHSWAP, MODE_ICON_ACB);
 
     lcd.backlight();
     lcd.setCursor(0, 0);
@@ -83,6 +85,10 @@ void disp_intro() {
 void disp_midi_light() {
     remain_lit = pdMS_TO_TICKS(500);
     vTaskSetTimeOutState(&last_midi_in);
+}
+
+void disp_ch_swap(bool is_swap) {
+    is_chswap = is_swap;
 }
 
 
@@ -128,7 +134,7 @@ void disp_show_sta() {
     if(!is_home_screen) return;
 
     lcd.setCursor(14, 0);
-    lcd.write(CHAR_ICON_ABC);
+    lcd.write(is_chswap ? CHAR_ICON_CHSWAP : CHAR_ICON_NO_CHSWAP);
 
     if(xTaskCheckForTimeOut( &last_midi_in, &remain_lit ) == pdFALSE) {
         lcd.write(CHAR_ICON_IN_ON);
@@ -180,6 +186,7 @@ void disp_draw_home() {
     disp_show_tone(0);
     disp_show_tone(1);
     disp_show_tone(2);
+    disp_show_noise();
 }
 
 void disp_rst_home() {
@@ -205,6 +212,7 @@ void _disp_task(void* pvParameters) {
         // infinitely do partial updates
         regi_valu_tuple_t tuple = status_wait_change_regi();
 #ifdef FEATURE_PARTIAL_UPDATES
+        disp_show_sta();
         switch(REGI_OF_TUPLE(tuple)) {
             case AY_REGI_TONE_A_COARSE:
             case AY_REGI_TONE_A_FINE:
