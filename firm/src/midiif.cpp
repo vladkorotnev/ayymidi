@@ -1,4 +1,3 @@
-#include <Arduino_FreeRTOS.h>
 #include <MIDI.h>
 #include <util.h>
 #include <midiif.h>
@@ -15,7 +14,7 @@ struct MySettings : public midi::DefaultSettings
 MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, Serial, MIDI, MySettings);
 #else
 #include <SoftwareSerial.h>
-SoftwareSerial mySerial(10, 11);
+SoftwareSerial mySerial(12, 11);
 MIDI_CREATE_CUSTOM_INSTANCE(SoftwareSerial, mySerial, MIDI, MySettings);
 #endif
 
@@ -78,14 +77,15 @@ inline void remap_channels_in_place(uint8_t* regi, uint8_t* valu) {
 
 void midi_on_sysex(byte* array, unsigned size) {
     // array structure: F0 <vendor code> <rest of data> F7
-    if(size < 4) return; // no valid messages for DRAFTv1.0 are less than 2bytes+1+1
     if(array[1] != AYYM_SYSEX_VENDOR_CODE) return; // this message is not for us
+    inf_log(F("Caught Sysex Size %u"), size);
 
     disp_midi_light();
+    digitalWrite(13,1);
 
     size_t now_offs = 2;
     while(now_offs < size-1) { // because at the end we also have 0xF7
-        byte* ayymidi_pkt = array+now_offs;
+        byte* ayymidi_pkt = &array[now_offs];
         size_t pkt_ptr = 0;
         ayymidi_cmd_num_t cmd = AYYMIDI_HDR_FETCH_CMD(ayymidi_pkt[pkt_ptr]);
 
@@ -115,10 +115,14 @@ void midi_on_sysex(byte* array, unsigned size) {
                     (uint8_t) ((ayymidi_pkt[pkt_ptr] & 0b00000100) << 5),
                     (uint8_t) ((ayymidi_pkt[pkt_ptr] & 0b00000010) << 6),
                 };
-                clock_bytes[0] |= ayymidi_pkt[++pkt_ptr] & 0x7F;
-                clock_bytes[1] |= ayymidi_pkt[++pkt_ptr] & 0x7F;
-                clock_bytes[2] |= ayymidi_pkt[++pkt_ptr] & 0x7F;
-                clock_bytes[3] |= ayymidi_pkt[++pkt_ptr] & 0x7F;
+                pkt_ptr++;
+                clock_bytes[0] |= ayymidi_pkt[pkt_ptr] & 0x7F;
+                pkt_ptr++;
+                clock_bytes[1] |= ayymidi_pkt[pkt_ptr] & 0x7F;
+                pkt_ptr++;
+                clock_bytes[2] |= ayymidi_pkt[pkt_ptr] & 0x7F;
+                pkt_ptr++;
+                clock_bytes[3] |= ayymidi_pkt[pkt_ptr] & 0x7F;
 
                 uint32_t clock = *((uint32_t*) &clock_bytes);
 
@@ -132,7 +136,7 @@ void midi_on_sysex(byte* array, unsigned size) {
             {
                 uint8_t regi = (ayymidi_pkt[pkt_ptr] & 0b00011110) >> 1;
                 uint8_t valu = (ayymidi_pkt[pkt_ptr] & 0b00000001) << 7;
-                pkt_ptr += 1;
+                pkt_ptr ++;
                 valu |= ayymidi_pkt[pkt_ptr] & 0x7F;
 
                 dbg_log(F("MIDI I/F WRITE_PAIR: Reg=%01x Val=%02x"), regi, valu);
@@ -147,6 +151,9 @@ void midi_on_sysex(byte* array, unsigned size) {
 
         now_offs += pkt_ptr + 1;
     }
+
+    digitalWrite(13,0);
+
 }
 
 void midi_on_reset() {
@@ -154,25 +161,15 @@ void midi_on_reset() {
     ay_reset();
 }
 
-void _midi_task(void *pvParameters) {
-    __UNUSED_ARG(pvParameters);
-    inf_log(F("MIDI I/F task run"));
-    for(;;)
-        MIDI.read();
-    err_log(F("MIDI I/F task end!!!!"));
+void midi_tick() {
+    MIDI.read();
 }
 
 void midi_begin() {
+    pinMode(13, OUTPUT);
     inf_log(F("MIDI I/F start"));
     MIDI.begin();
+    MIDI.turnThruOff();
     MIDI.setHandleSystemExclusive(midi_on_sysex);
     MIDI.setHandleSystemReset(midi_on_reset);
-
-    xTaskCreate(
-    _midi_task
-    ,  "MIDIIF"
-    ,  MIDIIF_STACKSZ
-    ,  NULL
-    ,  MIDIIF_PRIORITY
-    ,  NULL );
 }

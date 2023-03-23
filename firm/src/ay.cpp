@@ -45,8 +45,6 @@ void ay_out_internal(uint8_t port, uint8_t data){
 }
 
 void ay_reset(){
-  taskENTER_CRITICAL();
-
   pinMode(A0, OUTPUT); // D0
   pinMode(A1, OUTPUT);
   pinMode(A2, OUTPUT);
@@ -70,14 +68,8 @@ void ay_reset(){
   delayMicroseconds(100);
 
   for (int i=0;i<16;i++) ay_out_internal(i,0);
-
-  taskEXIT_CRITICAL();
 }
 
 void ay_out(uint8_t port, uint8_t data){
-  taskENTER_CRITICAL();
-
   ay_out_internal(port, data);
-
-  taskEXIT_CRITICAL();
 }

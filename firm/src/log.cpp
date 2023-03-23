@@ -1,6 +1,5 @@
 #include <log.h>
 #include <Arduino.h>
-#include <Arduino_FreeRTOS.h>
 #include <stdarg.h>
 
 #if !defined(USE_SOFTSERIAL) && defined(SERIAL_LOG)
@@ -48,7 +47,7 @@ void err_log(const __FlashStringHelper * fmt, ...) {
 }
 #else
 void log_begin() {}
-void dbg_log(const char *, ...) {}
-void inf_log(const char *, ...) {}
-void err_log(const char *, ...) {}
+void dbg_log(const __FlashStringHelper *, ...) {}
+void inf_log(const __FlashStringHelper *, ...) {}
+void err_log(const __FlashStringHelper *, ...) {}
 #endif

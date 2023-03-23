@@ -3,9 +3,9 @@
 #include <util.h>
 
 #define AYYM_SYSEX_VENDOR_CODE 0x7A
-#define MIDIIF_PRIORITY PRIORITY_MAX
-#define MIDIIF_STACKSZ 128
-#define MIDIIF_MAX_SYSEX 128
+#define MIDIIF_PRIORITY 0
+#define MIDIIF_STACKSZ 256
+#define MIDIIF_MAX_SYSEX 64
 #define MIDIIF_BAUD 31250
 
 typedef enum ayymidi_cmd_num {
@@ -15,5 +15,6 @@ typedef enum ayymidi_cmd_num {
 #define AYYMIDI_HDR_FETCH_CMD(x) (ayymidi_cmd_num_t)(((x & 0b01100000) >> 5) & 0b11)
 
 void midi_begin();
+void midi_tick();
 
 #endif

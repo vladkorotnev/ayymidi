@@ -1,4 +1,3 @@
-#include <Arduino_FreeRTOS.h>
 #include <log.h>
 #include <ay.h>
 #include <disp.h>
@@ -15,17 +14,10 @@ void setup() {
   inf_log(F("Starting..."));
 
   disp_begin();
-
   midi_begin();
-
-  vTaskStartScheduler();
-
-  // this should not execute
-  err_log(F("Why are we here??"));
-  for(;;);
 }
 
 
 void loop() {
-
+  midi_tick();
 }
