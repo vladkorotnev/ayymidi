@@ -35,7 +35,8 @@ class AyState():
         levels=[0,0,0],
         tone_channels=[3,3,3],
         ignore_tones=[],
-        frequency=1750000
+        frequency=1750000,
+        transpose=12
     ):
         self.tones = tones
         self.mixers= mixers
@@ -44,6 +45,7 @@ class AyState():
         self.tone_channels = tone_channels
         self.ignored_tones = ignore_tones
         self.clock = frequency
+        self.transpose = transpose
 
     def changeRegister(self, register, valu):
         if register == 0:
@@ -64,7 +66,7 @@ class AyState():
             self.levels[register - 8] = valu & 0x7
 
     def copy(self):
-        n = AyState(tones=self.tones.copy(), mixers=self.mixers.copy(), levels=self.levels.copy(), tone_channels=self.tone_channels, ignore_tones=self.ignored_tones, frequency=self.clock)
+        n = AyState(tones=self.tones.copy(), mixers=self.mixers.copy(), levels=self.levels.copy(), tone_channels=self.tone_channels, ignore_tones=self.ignored_tones, frequency=self.clock, transpose=self.transpose)
         n.notes = self.notes.copy()
         return n
 
@@ -93,10 +95,10 @@ class AyState():
             if this_note.note != origin_note.note:
                 if self.notes[tone_no] is None or abs((this_note.note_index + this_note.offset_from_note) - (self.notes[tone_no].note_index + self.notes[tone_no].offset_from_note)) > 0.7:
                     # Turn on new note
-                    rslt.append(NoteOn(tone_chn, this_note.note_index, timestamp, 1, TONE_VOL_TBL[this_vol]))
+                    rslt.append(NoteOn(tone_chn, this_note.note_index + self.transpose, timestamp, 1, TONE_VOL_TBL[this_vol]))
                     # Turn off old note
                     if self.notes[tone_no] is not None:
-                        rslt.append(NoteOff(tone_chn, self.notes[tone_no].note_index, timestamp, 64))
+                        rslt.append(NoteOff(tone_chn, self.notes[tone_no].note_index + self.transpose, timestamp, 64))
                     self.notes[tone_no] = this_note
 
         return rslt
