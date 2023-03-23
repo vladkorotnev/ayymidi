@@ -28,7 +28,7 @@ args = parser.parse_args()
 WRITER=AyyMidiWriter(PSG_TIMEBASE, PSG_TEMPO)
 if args.ignore_tone is not None:
     WRITER.setVisIgnoreToneIndexes(args.ignore_tone)
-
+WRITER.setClock(PSG_CLOCK, args.is_acb)
 
 INFILE=open(args.infile, 'rb').read()
 if INFILE[0:4] != b"PSG\x1A":
