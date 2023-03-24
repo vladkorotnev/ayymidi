@@ -3,9 +3,7 @@
 #include <util.h>
 
 #define AYYM_SYSEX_VENDOR_CODE 0x7A
-#define MIDIIF_PRIORITY 0
-#define MIDIIF_STACKSZ 256
-#define MIDIIF_MAX_SYSEX 64
+#define MIDIIF_MAX_SYSEX 128
 #define MIDIIF_BAUD 31250
 
 typedef enum ayymidi_cmd_num {

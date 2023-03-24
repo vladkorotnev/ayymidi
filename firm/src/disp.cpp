@@ -1,13 +1,13 @@
 #include <Arduino.h>
-#include <LiquidCrystal_I2C.h>
+#include <AsyncCrystal_I2C.h>
 #include <util.h>
 #include <status.h>
 #include <disp.h>
 #include <ay.h>
 
-LiquidCrystal_I2C lcd(0x27, 16, 2); // Default address of most PCF8574 modules, change according
+AsyncCrystal_I2C lcd(0x27, 16, 2); // Default address of most PCF8574 modules, change according
 
-const char CHAR_ICON_IN_OFF = 0;
+const char CHAR_ICON_IN_OFF = 1;
 PROGMEM const char IN_ICON_OFF[] = {
     0b00011,
     0b00101,
@@ -19,7 +19,7 @@ PROGMEM const char IN_ICON_OFF[] = {
     0b00011
 };
 
-const char CHAR_ICON_IN_ON = 1;
+const char CHAR_ICON_IN_ON = 2;
 PROGMEM const char IN_ICON_ON[] = {
     0b00011,
     0b00111,
@@ -31,7 +31,7 @@ PROGMEM const char IN_ICON_ON[] = {
     0b00011
 };
 
-const char CHAR_ICON_CHSWAP = 2;
+const char CHAR_ICON_CHSWAP = 3;
 PROGMEM const char MODE_ICON_ACB[] = {
     0b00000,
     0b00100,
@@ -45,21 +45,20 @@ PROGMEM const char MODE_ICON_ACB[] = {
 
 const char CHAR_ICON_NO_CHSWAP = ' ';
 
-static bool is_home_screen = false;
 static bool is_chswap = false;
 static uint8_t midi_in_sts = 0;
 
 void disp_intro() {
-    is_home_screen = false;
-    lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print(F("Genjitsu Labs    "));
+    lcd.flush();
     lcd.setCursor(0, 1);
     lcd.print(F("    AYYMIDI v1.0"));
+    lcd.flush();
 }
 
 void disp_midi_light() {
-    midi_in_sts = 32;
+    midi_in_sts = 4;
 }
 
 void disp_ch_swap(bool is_swap) {
@@ -82,8 +81,7 @@ void disp_ch_swap(bool is_swap) {
 // - <: MIDI IN data sign
 // - Z: ACB icon if channel remap is active
 
-
-void disp_draw_home() {
+void disp_draw_home_top() {
     static char buf[17] = { 0 };
     uint8_t lv_a = status_regi_get_blocking(AY_REGI_LVL_A) & 0x0F;
     uint8_t lv_b = status_regi_get_blocking(AY_REGI_LVL_B) & 0x0F;
@@ -93,30 +91,43 @@ void disp_draw_home() {
     sprintf(buf, " %.1X %.1X %.1X  %.4X  %c%c", lv_a, lv_b, lv_c, env, is_chswap ? CHAR_ICON_CHSWAP : CHAR_ICON_NO_CHSWAP, (midi_in_sts > 0) ? CHAR_ICON_IN_ON : CHAR_ICON_IN_OFF);
     lcd.setCursor(0, 0);
     lcd.print(buf);
+}
 
+void disp_draw_home_bottom() {
+    static char buf[17] = { 0 };
     uint16_t tone_a = ((status_regi_get_blocking(1) & 0xF) << 8) | status_regi_get_blocking(0);
     uint16_t tone_b = ((status_regi_get_blocking(3) & 0xF) << 8) | status_regi_get_blocking(2);
     uint16_t tone_c = ((status_regi_get_blocking(5) & 0xF) << 8) | status_regi_get_blocking(4);
     uint8_t noise = status_regi_get_blocking(AY_REGI_NOISE) & 0x1F;
 
-    sprintf(buf, " %.3X %.3X %.3X %.2X", tone_a, tone_b, tone_c, noise);
+    sprintf(buf, " %.3X %.3X %.3X %.2X ", tone_a, tone_b, tone_c, noise);
     lcd.setCursor(0, 1);
     lcd.print(buf);
+
+    if(midi_in_sts > 0) midi_in_sts--;
 }
 
 void disp_rst_home() {
     // redraw the home screen in full
-    if(is_home_screen) return;
-
-    is_home_screen = true;
-
-    lcd.clear();
-    disp_draw_home();
+    disp_draw_home_top();
+    lcd.flush();
+    disp_draw_home_bottom();
+    lcd.flush();
 }
 
+bool disp_row_flg = false;
+
 void disp_tick() {
-   /// disp_draw_home();
-   disp_intro();
+   if(millis() % 8 == 0 && !lcd.busy())  {
+    if(!disp_row_flg) {
+        disp_draw_home_top();
+    } else {
+        disp_draw_home_bottom();
+    }
+    disp_row_flg = !disp_row_flg;
+   }
+
+   lcd.loop();
 }
 
 void disp_begin() {
@@ -124,15 +135,16 @@ void disp_begin() {
     lcd.init();
 
     lcd.createChar(CHAR_ICON_IN_OFF, IN_ICON_OFF);
+    lcd.flush();
     lcd.createChar(CHAR_ICON_IN_ON, IN_ICON_ON);
+    lcd.flush();
     lcd.createChar(CHAR_ICON_CHSWAP, MODE_ICON_ACB);
+    lcd.flush();
 
     lcd.backlight();
-    lcd.setCursor(0, 0);
     lcd.noCursor();
-    lcd.clear();
+    lcd.flush();
 
     disp_intro();
     delay(1000);
-    disp_rst_home();
 }

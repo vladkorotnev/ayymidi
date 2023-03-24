@@ -8,6 +8,7 @@ struct MySettings : public midi::DefaultSettings
 {
     static const unsigned SysExMaxSize = MIDIIF_MAX_SYSEX;
     static const unsigned BaudRate = MIDIIF_BAUD;
+    static const bool Use1ByteParsing = false;
 };
 
 #ifndef USE_SOFTSERIAL
@@ -76,6 +77,15 @@ inline void remap_channels_in_place(uint8_t* regi, uint8_t* valu) {
 
 
 void midi_on_sysex(byte* array, unsigned size) {
+    #ifdef MIDI_DUMP
+      for(int i = 0; i<size; i++) {
+        if (array[i] < 16) {Serial.print("0");}
+        Serial.print(array[i], HEX);
+        Serial.print(" ");
+    }
+    Serial.println("");
+    #endif
+
     // array structure: F0 <vendor code> <rest of data> F7
     if(array[1] != AYYM_SYSEX_VENDOR_CODE) return; // this message is not for us
     inf_log(F("Caught Sysex Size %u"), size);
