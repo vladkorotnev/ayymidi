@@ -6,6 +6,11 @@
 #include <AsyncI2CMaster.h>
 #include <ArduinoQueue.h>
 
+#ifndef ASYNCCRYSTAL_QUEUE_LENGTH
+// absolute minimum to fully refresh a 1602 with little headroom, fits well in atmega328
+// tune as necessary otherwise
+#define ASYNCCRYSTAL_QUEUE_LENGTH 64
+#endif
 
 // commands
 #define LCD_CLEARDISPLAY 0x01
@@ -122,13 +127,13 @@ private:
     WAIT_MICROS
   } async_write_op_t;
 
-
   typedef struct __attribute__((packed)) async_wait_info {
     uint16_t  wait_length;
   } async_wait_info_t;
 
   typedef struct __attribute__((packed))  async_send_info {
     uint8_t data;
+    uint8_t tx_mode;
   } async_send_info_t;
 
   typedef union __attribute__((packed)) async_write_queue_info {
@@ -141,15 +146,27 @@ private:
     async_write_queue_info_t info;
   } async_write_queue_item_t;
 
+  typedef enum __attribute__((packed)) async_write_stage  {
+    WILL_SET_BUS,
+    DID_SET_BUS,
+    DID_EN_HIGH,
+    WAIT_EN_LOW,
+    DID_EN_LOW,
+    WAIT_SETTLE
+  } async_write_stage_t;
+
+  typedef enum __attribute__((packed)) async_write_part  {
+    HIGH_NIBBLE,
+    LOW_NIBBLE
+  } async_write_part_t;
+
   void init_priv();
   void send(uint8_t, uint8_t);
-  void write4bits(uint8_t);
-  void expanderWrite(uint8_t);
-  void pulseEnable(uint8_t);
 
-  void _asyncwrite_write(uint8_t);
+  void _asyncwrite_write(uint8_t, uint8_t);
   void _asyncwrite_delay(uint16_t);
   void _asyncwrite_start_if_needed();
+  void _asyncwrite_tx_cycle();
   static void _asyncwrite_callback(uint8_t, void*);
 
   uint8_t _Addr;
@@ -161,10 +178,13 @@ private:
   uint8_t _cols;
   uint8_t _rows;
   uint8_t _backlightval;
+
   AsyncI2CMaster i2c;
-  ArduinoQueue<async_write_queue_item_t> _queue = ArduinoQueue<async_write_queue_item_t>(256);
+  ArduinoQueue<async_write_queue_item_t> _queue = ArduinoQueue<async_write_queue_item_t>(ASYNCCRYSTAL_QUEUE_LENGTH);
   bool _waiting;
   unsigned long _wait_start;
+  async_write_stage_t _tx_stage;
+  async_write_part_t _tx_part;
 };
 
 #endif

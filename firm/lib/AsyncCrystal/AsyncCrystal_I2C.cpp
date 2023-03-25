@@ -84,7 +84,7 @@ void AsyncCrystal_I2C::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
 	delay(50); 
   
 	// Now we pull both RS and R/W low to begin commands
-	expanderWrite(_backlightval);	// reset expanderand turn backlight off (Bit 8 =1)
+	_asyncwrite_write(0, 0);
 	flush();
 	delay(1000);
 
@@ -93,22 +93,23 @@ void AsyncCrystal_I2C::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
 	// figure 24, pg 46
 	
 	  // we start in 8bit mode, try to set 4 bit mode
-   write4bits(0x03 << 4);
+	uint8_t set_4bit_mode = 0x03 << 4;
+   _asyncwrite_write(set_4bit_mode, 0);
    flush();
    delayMicroseconds(4500);
    
    // second try
-   write4bits(0x03 << 4);
+   _asyncwrite_write(set_4bit_mode, 0);
    flush();
    delayMicroseconds(4500);
    
    // third go!
-   write4bits(0x03 << 4); 
+   _asyncwrite_write(set_4bit_mode, 0);
    flush();
    delayMicroseconds(500);
    
    // finally, set to 4-bit interface
-   write4bits(0x02 << 4); 
+   _asyncwrite_write(0x02 << 4, 0);
    flush();
 
 
@@ -240,12 +241,12 @@ void AsyncCrystal_I2C::createChar(uint8_t location, const char *charmap) {
 // Turn the (optional) backlight off/on
 void AsyncCrystal_I2C::noBacklight(void) {
 	_backlightval=LCD_NOBACKLIGHT;
-	expanderWrite(0);
+	_asyncwrite_write(0, 0);
 }
 
 void AsyncCrystal_I2C::backlight(void) {
 	_backlightval=LCD_BACKLIGHT;
-	expanderWrite(0);
+	_asyncwrite_write(0, 0);
 }
 
 
@@ -274,17 +275,85 @@ void AsyncCrystal_I2C::_asyncwrite_delay(uint16_t time) {
 	});
 }
 
-void AsyncCrystal_I2C::_asyncwrite_write(uint8_t value) {
+void AsyncCrystal_I2C::_asyncwrite_write(uint8_t value, uint8_t mode) {
 	_queue.enqueue(async_write_queue_item_t {
 		op: SEND,
-		info: async_write_queue_info_t { send_info: async_send_info_t { data: value } }
+		info: async_write_queue_info_t { send_info: async_send_info_t { data: value, tx_mode: mode } }
 	});
 }
 
 void AsyncCrystal_I2C::_asyncwrite_callback(uint8_t status, void* arg) {
 	AsyncCrystal_I2C * that = (AsyncCrystal_I2C*) arg;
-	that->_queue.dequeue();
-	that->_waiting = false;
+	that->_asyncwrite_tx_cycle();
+}
+
+void AsyncCrystal_I2C::_asyncwrite_tx_cycle() {
+	async_write_queue_item_t* current_task = _queue.getHeadPtr();
+	if(current_task == nullptr || current_task->op != SEND) return;
+
+all_over_again:
+	uint8_t this_time_data = current_task->info.send_info.tx_mode | _backlightval;
+
+	switch(_tx_part) {
+		case HIGH_NIBBLE:
+			this_time_data |= (current_task->info.send_info.data & 0xF0);
+			break;
+
+		case LOW_NIBBLE:
+			this_time_data |= ((current_task->info.send_info.data << 4) & 0xF0);
+			break;
+	}
+
+	switch(_tx_stage) {
+		case WILL_SET_BUS: // set value on the bus (can be skipped but some LCD don't like it)
+			i2c.send(_Addr, &this_time_data, sizeof(uint8_t), &this->_asyncwrite_callback, (void*) this);
+			_tx_stage = DID_SET_BUS;
+			break;
+
+		case DID_SET_BUS: // now push en to high
+			this_time_data |= En;
+			i2c.send(_Addr, &this_time_data, sizeof(uint8_t), &this->_asyncwrite_callback, (void*) this);
+			_tx_stage = DID_EN_HIGH;
+			break;
+
+		case DID_EN_HIGH: // now make sure we have it on for 2us or more
+			_wait_start = micros();
+			_tx_stage = WAIT_EN_LOW;
+			break;
+
+		case WAIT_EN_LOW: 
+			{
+				unsigned long now_time = micros();
+				if(now_time - _wait_start > 2) {
+					// time has passed, push EN low again
+					i2c.send(_Addr, &this_time_data, sizeof(uint8_t), &this->_asyncwrite_callback, (void*) this);
+					_tx_stage = DID_EN_LOW;
+				}
+			}
+			break;
+
+		case DID_EN_LOW: // give display 50us to settle
+			_wait_start = micros();
+			_tx_stage = WAIT_SETTLE;
+			break;
+
+		case WAIT_SETTLE: 
+			{
+				unsigned long now_time = micros();
+				if(now_time - _wait_start > 50) {
+					// time has passed, ready to do next nibble or next queue item
+					if(_tx_part == HIGH_NIBBLE) {
+						_tx_part = LOW_NIBBLE;
+						_tx_stage = WILL_SET_BUS;
+						goto all_over_again; // saving some stack mem :p
+					} else {
+						_queue.dequeue();
+						_waiting = false;
+					}
+				}
+			}
+			break;
+	}
 }
 
 void AsyncCrystal_I2C::loop() {
@@ -306,8 +375,17 @@ void AsyncCrystal_I2C::loop() {
 
 			case SEND:
 				if(!_waiting) {
-					i2c.send(_Addr, &current_task->info.send_info.data, sizeof(uint8_t), &this->_asyncwrite_callback, (void*) this);
+					_tx_part = HIGH_NIBBLE;
+#ifdef ASYNCCRYSTAL_SKIP_BUS_SET // for some displays that are fine with it
+					_tx_stage = DID_SET_BUS;
+#else
+					_tx_stage = WILL_SET_BUS;
+#endif
 					_waiting = true;
+					_asyncwrite_tx_cycle();
+				}
+				else if (_tx_stage == WAIT_EN_LOW || _tx_stage == WAIT_SETTLE) {
+					_asyncwrite_tx_cycle();
 				}
 				break;
 		}
@@ -318,29 +396,8 @@ void AsyncCrystal_I2C::loop() {
 
 // write either command or data
 void AsyncCrystal_I2C::send(uint8_t value, uint8_t mode) {
-	uint8_t highnib=value&0xf0;
-	uint8_t lownib=(value<<4)&0xf0;
-       write4bits((highnib)|mode);
-	write4bits((lownib)|mode); 
+	_asyncwrite_write(value, mode);
 }
-
-void AsyncCrystal_I2C::write4bits(uint8_t value) {
-	//expanderWrite(value);
-	pulseEnable(value);
-}
-
-void AsyncCrystal_I2C::expanderWrite(uint8_t _data){      
-	_asyncwrite_write((int)(_data) | _backlightval);
-}
-
-void AsyncCrystal_I2C::pulseEnable(uint8_t _data){
-	expanderWrite(_data | En);	// En high
-	_asyncwrite_delay(2);		// enable pulse must be >450ns
-	
-	expanderWrite(_data & ~En);	// En low
-	_asyncwrite_delay(50);		// commands need > 37us to settle
-} 
-
 
 // Alias functions
 

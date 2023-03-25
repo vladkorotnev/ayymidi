@@ -115,16 +115,10 @@ void disp_rst_home() {
     lcd.flush();
 }
 
-bool disp_row_flg = false;
-
 void disp_tick() {
    if(millis() % 8 == 0 && !lcd.busy())  {
-    if(!disp_row_flg) {
         disp_draw_home_top();
-    } else {
         disp_draw_home_bottom();
-    }
-    disp_row_flg = !disp_row_flg;
    }
 
    lcd.loop();
