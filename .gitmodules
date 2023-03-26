@@ -1,0 +1,6 @@
+[submodule "firm/lib/FastPwmPin"]
+	path = firm/lib/FastPwmPin
+	url = https://github.com/maxint-rd/FastPwmPin.git
+[submodule "firm/lib/asynci2cmaster"]
+	path = firm/lib/asynci2cmaster
+	url = https://github.com/cskarai/asynci2cmaster.git
