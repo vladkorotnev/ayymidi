@@ -127,6 +127,7 @@ void disp_tick() {
 void disp_begin() {
     inf_log(F("Setup LCD"));
     lcd.init();
+    delay(1000);
 
     lcd.createChar(CHAR_ICON_IN_OFF, IN_ICON_OFF);
     lcd.flush();

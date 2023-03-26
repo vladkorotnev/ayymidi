@@ -86,13 +86,14 @@ inline void handle_3rdparty_sysex(byte* array, unsigned size) {
     ) {
         // Casio FD-1 sends this message when you press the STOP button
         // So it's a good idea to shut up the AY now
+        inf_log(F("FD1 Stop Sysex!!"));
         ay_reset();
     }
 }
 
 void midi_on_sysex(byte* array, unsigned size) {
     #ifdef MIDI_DUMP
-      for(int i = 0; i<size; i++) {
+    for(int i = 0; i<size; i++) {
         if (array[i] < 16) {Serial.print("0");}
         Serial.print(array[i], HEX);
         Serial.print(" ");
@@ -105,7 +106,7 @@ void midi_on_sysex(byte* array, unsigned size) {
         handle_3rdparty_sysex(array, size);
         return; // this message is not for us otherwise
     }
-    inf_log(F("Caught Sysex Size %u"), size);
+    inf_log(F("Caught AYYMIDI Sysex Size %u"), size);
 
     disp_midi_light();
     digitalWrite(13,1);
@@ -166,11 +167,10 @@ void midi_on_sysex(byte* array, unsigned size) {
                 pkt_ptr ++;
                 valu |= ayymidi_pkt[pkt_ptr] & 0x7F;
 
-                dbg_log(F("MIDI I/F WRITE_PAIR: Reg=%01x Val=%02x"), regi, valu);
                 if(chswap_active) {
                     remap_channels_in_place(&regi, &valu);
-                    dbg_log(F("MIDI I/F WRITE_PAIR ReMap: Reg=%01x Val=%02x"), regi, valu);
                 }
+                dbg_log(F("MIDI I/F WRITE_PAIR: Reg=%01x Val=%02x"), regi, valu);
                 ay_out(regi, valu);
             }
             break;

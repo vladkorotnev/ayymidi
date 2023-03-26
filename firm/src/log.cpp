@@ -2,10 +2,6 @@
 #include <Arduino.h>
 #include <stdarg.h>
 
-#if !defined(USE_SOFTSERIAL) && defined(SERIAL_LOG)
-#error Logger will take over UART. Please use SoftSerial or disable logging.
-#endif
-
 #if defined(SERIAL_LOG)
 void log_begin() {
     Serial.begin(9600);
