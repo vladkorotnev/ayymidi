@@ -96,21 +96,22 @@ void AsyncCrystal_I2C::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
 	uint8_t set_4bit_mode = 0x03 << 4;
    _asyncwrite_write(set_4bit_mode, 0);
    flush();
-   delayMicroseconds(4500);
+   delayMicroseconds(65000);
    
    // second try
    _asyncwrite_write(set_4bit_mode, 0);
    flush();
-   delayMicroseconds(4500);
+   delayMicroseconds(65000);
    
    // third go!
    _asyncwrite_write(set_4bit_mode, 0);
    flush();
-   delayMicroseconds(500);
+   delayMicroseconds(65000);
    
    // finally, set to 4-bit interface
    _asyncwrite_write(0x02 << 4, 0);
    flush();
+   delayMicroseconds(65000);
 
 
 	// set # lines, font size, etc.

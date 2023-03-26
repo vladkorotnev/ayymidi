@@ -75,6 +75,20 @@ inline void remap_channels_in_place(uint8_t* regi, uint8_t* valu) {
 }
 #endif
 
+inline void handle_3rdparty_sysex(byte* array, unsigned size) {
+    if(
+        size == 6
+        && array[1] == 0x7E
+        && array[2] == 0x7F
+        && array[3] == 0x09
+        && array[4] == 0x02
+        && array[5] == 0xF7
+    ) {
+        // Casio FD-1 sends this message when you press the STOP button
+        // So it's a good idea to shut up the AY now
+        ay_reset();
+    }
+}
 
 void midi_on_sysex(byte* array, unsigned size) {
     #ifdef MIDI_DUMP
@@ -87,7 +101,10 @@ void midi_on_sysex(byte* array, unsigned size) {
     #endif
 
     // array structure: F0 <vendor code> <rest of data> F7
-    if(array[1] != AYYM_SYSEX_VENDOR_CODE) return; // this message is not for us
+    if(array[1] != AYYM_SYSEX_VENDOR_CODE) {
+        handle_3rdparty_sysex(array, size);
+        return; // this message is not for us otherwise
+    }
     inf_log(F("Caught Sysex Size %u"), size);
 
     disp_midi_light();
