@@ -1,7 +1,7 @@
 # AYYMIDI protocol
 
 * 2023/02/28: draft v1.0
-* 2023/03/14: draft v1.0.1: remove sequential write commands as they don't give any size or speed benifit over repeated pair write commands
+* 2023/03/14: draft v1.0.1: remove sequential write commands as they don't give any size or speed benefit over repeated pair write commands
 
 ## Abstract
 
@@ -11,7 +11,9 @@ The Manufacturer ID for SysEx messages is chosen to be `0x7A` (according to the 
 
 All of the following SysEx examples do not show the Manufacturer ID prefix and the common MIDI prefix/suffix.
 
-## Setting the chip clock rate
+## Set the chip clock rate and reset the chip
+
+### Data
 
 * 5 bytes payload
     * First byte:
@@ -21,9 +23,15 @@ All of the following SysEx examples do not show the Manufacturer ID prefix and t
         * 1 bit: 1 if ACB stereo, 0 if ABC stereo
     * Second byte onwards:
         * Respective byte of the clock value in Little-Endian AND 0x7F
-* Cannot be followed by any other command
+* Can be followed by any other command
+
+### Implementation
+
+Upon receiving `SETCLOCK`, the device must clock the target SSG chip with the specified frequency and issue a reset command to it.
 
 ## Writing to a specific register
+
+### Data
 
 * 2 bytes payload
     * First byte:
@@ -34,3 +42,7 @@ All of the following SysEx examples do not show the Manufacturer ID prefix and t
     * Second byte:
         * Register value AND 0x7F
 * Can be followed by any other command
+
+### Implementation
+
+Upon receiving `WRITEPAIR` the device must write the provided register value into the provided register number of the SSG.
