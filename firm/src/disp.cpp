@@ -116,7 +116,7 @@ void disp_rst_home() {
 }
 
 void disp_tick() {
-   if(millis() % 8 == 0 && !lcd.busy())  {
+   if(!lcd.busy())  {
         disp_draw_home_top();
         disp_draw_home_bottom();
    }

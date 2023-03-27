@@ -62,7 +62,6 @@ void AsyncCrystal_I2C::init(){
 void AsyncCrystal_I2C::init_priv()
 {
 	i2c.begin();
-	i2c.setRetryCount(5);
 	_displayfunction = LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS;
 	begin(_cols, _rows);  
 }
