@@ -185,6 +185,7 @@ private:
   unsigned long _wait_start;
   async_write_stage_t _tx_stage;
   async_write_part_t _tx_part;
+  bool _init = true;
 };
 
 #endif

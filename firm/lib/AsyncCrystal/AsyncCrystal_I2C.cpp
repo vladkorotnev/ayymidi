@@ -86,7 +86,7 @@ void AsyncCrystal_I2C::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
 	// Now we pull both RS and R/W low to begin commands
 	_asyncwrite_write(0, 0);
 	flush();
-	delay(1000);
+	delay(100);
 
   	//put the LCD into 4 bit mode
 	// this is according to the hitachi HD44780 datasheet
@@ -95,24 +95,15 @@ void AsyncCrystal_I2C::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
 	  // we start in 8bit mode, try to set 4 bit mode
 	uint8_t set_4bit_mode = 0x03 << 4;
    _asyncwrite_write(set_4bit_mode, 0);
-   flush();
-   delayMicroseconds(65000);
-   
-   // second try
+   _asyncwrite_delay(6000); // 5ms+
    _asyncwrite_write(set_4bit_mode, 0);
-   flush();
-   delayMicroseconds(65000);
-   
-   // third go!
+   _asyncwrite_delay(200); // 160us+
    _asyncwrite_write(set_4bit_mode, 0);
+   _asyncwrite_delay(200); // 160us+
+   _asyncwrite_write(0x02 << 4, 0); // finally set to 4bit mode
+   _asyncwrite_delay(60000);
    flush();
-   delayMicroseconds(65000);
-   
-   // finally, set to 4-bit interface
-   _asyncwrite_write(0x02 << 4, 0);
-   flush();
-   delayMicroseconds(65000);
-
+	_init = false;
 
 	// set # lines, font size, etc.
 	command(LCD_FUNCTIONSET | _displayfunction);  
@@ -343,9 +334,13 @@ all_over_again:
 				unsigned long now_time = micros();
 				if(now_time - _wait_start > 50) {
 					// time has passed, ready to do next nibble or next queue item
-					if(_tx_part == HIGH_NIBBLE) {
+					if(_tx_part == HIGH_NIBBLE && !_init) {
 						_tx_part = LOW_NIBBLE;
-						_tx_stage = WILL_SET_BUS;
+#ifdef ASYNCCRYSTAL_SKIP_BUS_SET // for some displays that are fine with it
+					_tx_stage = DID_SET_BUS;
+#else
+					_tx_stage = WILL_SET_BUS;
+#endif
 						goto all_over_again; // saving some stack mem :p
 					} else {
 						_queue.dequeue();
