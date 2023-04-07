@@ -6,6 +6,15 @@
 #include <AsyncI2CMaster.h>
 #include <ArduinoQueue.h>
 
+#ifdef ASYNCCRYSTAL_VFD
+  typedef enum __attribute__((packed)) vfd_bright  {
+    BRIGHT_100 = 0b00,
+    BRIGHT_75 = 0b01,
+    BRIGHT_50 = 0b10,
+    BRIGHT_25 = 0b11
+  } vfd_bright_t;
+#endif
+
 #ifndef ASYNCCRYSTAL_QUEUE_LENGTH
 // absolute minimum to fully refresh a 1602 with little headroom, fits well in atmega328
 // tune as necessary otherwise
@@ -96,6 +105,10 @@ public:
   void init();
   void oled_init();
 
+#ifdef ASYNCCRYSTAL_VFD
+void AsyncCrystal_I2C::vfd_brightness(vfd_bright_t brightness);
+#endif
+
 ////compatibility API function aliases
 void blink_on();						// alias for blink()
 void blink_off();       					// alias for noBlink()
@@ -178,6 +191,9 @@ private:
   uint8_t _cols;
   uint8_t _rows;
   uint8_t _backlightval;
+#ifdef ASYNCCRYSTAL_VFD
+  vfd_bright_t _brightness;
+#endif
 
   AsyncI2CMaster i2c;
   ArduinoQueue<async_write_queue_item_t> _queue = ArduinoQueue<async_write_queue_item_t>(ASYNCCRYSTAL_QUEUE_LENGTH);

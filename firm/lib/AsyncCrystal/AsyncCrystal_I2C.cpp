@@ -62,7 +62,10 @@ void AsyncCrystal_I2C::init(){
 void AsyncCrystal_I2C::init_priv()
 {
 	i2c.begin();
-	_displayfunction = LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS;
+	_displayfunction = LCD_4BITMODE | LCD_2LINE | LCD_5x8DOTS;
+#ifdef ASYNCCRYSTAL_VFD
+	_displayfunction |= _brightness;
+#endif
 	begin(_cols, _rows);  
 }
 
@@ -100,7 +103,6 @@ void AsyncCrystal_I2C::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
    _asyncwrite_write(set_4bit_mode, 0);
    _asyncwrite_delay(200); // 160us+
    _asyncwrite_write(0x02 << 4, 0); // finally set to 4bit mode
-   _asyncwrite_delay(60000);
    flush();
 	_init = false;
 
@@ -129,6 +131,15 @@ void AsyncCrystal_I2C::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
 }
 
 /********** high level commands, for the user! */
+#ifdef ASYNCCRYSTAL_VFD
+void AsyncCrystal_I2C::vfd_brightness(vfd_bright_t brightness) {
+	_brightness = brightness;
+	_displayfunction &= 0xFC;
+	_displayfunction |= _brightness;
+	command(LCD_FUNCTIONSET | _displayfunction);  
+}
+#endif
+
 void AsyncCrystal_I2C::clear(){
 	command(LCD_CLEARDISPLAY);// clear display, set cursor position to zero
 	_asyncwrite_delay(2000);  // this command takes a long time!
