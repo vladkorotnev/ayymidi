@@ -2,6 +2,7 @@
 
 * 2023/02/28: draft v1.0
 * 2023/03/14: draft v1.0.1: remove sequential write commands as they don't give any size or speed benefit over repeated pair write commands
+* 2023/04/07: use port 0xE (IO-A) for text display
 
 ## Abstract
 
@@ -43,6 +44,23 @@ Upon receiving `SETCLOCK`, the device must clock the target SSG chip with the sp
         * Register value AND 0x7F
 * Can be followed by any other command
 
+### Special case: IO-A
+
+* Dynamic payload
+    * First byte:
+        * 1 bit: forbidden
+        * 2 bits: command (`WRITEPAIR` == 0x2 == 0b10)
+        * 4 bits: AY register number == 0xE (IO-A)
+        * 1 bit: MS bit of the (Time In Seconds)
+    * Second byte:
+        * (Time In Seconds) value AND 0x7F
+    * Third byte... Nth byte
+        * String for top line of screen (NUL included)
+    * N+1th byte... Xth byte
+        * String for bottom line of screen (NUL included)
+* Can be followed by any other command
+
 ### Implementation
 
-Upon receiving `WRITEPAIR` the device must write the provided register value into the provided register number of the SSG.
+Upon receiving `WRITEPAIR` the device must write the provided register value into the provided register number of the SSG, unless the write is for the IO port A.
+In such case, the device must parse the packet and display the text strings if it has a display unit.

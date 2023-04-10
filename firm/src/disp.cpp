@@ -7,31 +7,7 @@
 
 AsyncCrystal_I2C lcd(0x27, 16, 2); // Default address of most PCF8574 modules, change according
 
-const char CHAR_ICON_IN_OFF = 0;
-PROGMEM const char IN_ICON_OFF[] = {
-    0b00011,
-    0b00101,
-    0b01001,
-    0b10001,
-    0b01001,
-    0b00101,
-    0b00011,
-    0b00000
-};
-
-const char CHAR_ICON_IN_ON = 1;
-PROGMEM const char IN_ICON_ON[] = {
-    0b00011,
-    0b00111,
-    0b01111,
-    0b11111,
-    0b01111,
-    0b00111,
-    0b00011,
-    0b00000
-};
-
-const char CHAR_ICON_CHSWAP = 2;
+const char CHAR_ICON_CHSWAP = 0;
 PROGMEM const char MODE_ICON_ACB[] = {
     0b00100,
     0b00010,
@@ -44,7 +20,7 @@ PROGMEM const char MODE_ICON_ACB[] = {
 };
 const char CHAR_ICON_NO_CHSWAP = ' ';
 
-const char CHAR_ICON_BAR_START = 3;
+const char CHAR_ICON_BAR_START = 2;
 PROGMEM const char ICON_BARS[] = {
     0b00000,
     0b00000,
@@ -100,6 +76,92 @@ static uint8_t midi_in_sts = 0;
 static uint16_t msg_dur = 0;
 unsigned long last_millis = 0;
 
+
+const char CHAR_SPINNER = 1;
+const size_t SPINNER_PHASES_MAX = 7;
+static int spinner_phase = 0;
+static int old_spinner_phase = 0;
+PROGMEM const char ICON_SPINNER_FRAMES[] = { 
+    0b00000,
+    0b10100,
+    0b00000,
+    0b10001,
+    0b00000,
+    0b10101,
+    0b00000,
+    0b00000,
+
+    0b00000,
+    0b10101,
+    0b00000,
+    0b10000,
+    0b00000,
+    0b10101,
+    0b00000,
+    0b00000,
+
+    0b00000,
+    0b10101,
+    0b00000,
+    0b10001,
+    0b00000,
+    0b10100,
+    0b00000,
+    0b00000,
+
+    0b00000,
+    0b10101,
+    0b00000,
+    0b10001,
+    0b00000,
+    0b10001,
+    0b00000,
+    0b00000,
+
+    0b00000,
+    0b10101,
+    0b00000,
+    0b10001,
+    0b00000,
+    0b00101,
+    0b00000,
+    0b00000,
+
+    0b00000,
+    0b10101,
+    0b00000,
+    0b00001,
+    0b00000,
+    0b10101,
+    0b00000,
+    0b00000,
+
+    0b00000,
+    0b00101,
+    0b00000,
+    0b10001,
+    0b00000,
+    0b10101,
+    0b00000,
+    0b00000,
+
+    0b00000,
+    0b10001,
+    0b00000,
+    0b10001,
+    0b00000,
+    0b10101,
+    0b00000,
+    0b00000,
+ };
+
+void disp_spinner_update(bool sync) {
+    if(spinner_phase >= SPINNER_PHASES_MAX) spinner_phase = 0;
+    lcd.createChar(CHAR_SPINNER, &ICON_SPINNER_FRAMES[spinner_phase * 8]);
+    if(sync) lcd.flush();
+    old_spinner_phase = spinner_phase;
+}
+
 static uint8_t a_bar = 0;
 static uint8_t b_bar = 0;
 static uint8_t c_bar = 0;
@@ -125,13 +187,16 @@ void disp_intro() {
     lcd.print(F("Genjitsu Labs    "));
     lcd.flush();
     lcd.setCursor(0, 1);
-    lcd.print(F("  AYYMIDI v1.0.1"));
+    lcd.print(F("  AYYMIDI   v1.1"));
     lcd.flush();
     disp_sus_upd_ms(1600);
 }
 
 void disp_midi_light() {
-    midi_in_sts = 4;
+    if(old_spinner_phase != spinner_phase) return; // too early to change, the old one wasn't shown yet
+
+    if(spinner_phase == SPINNER_PHASES_MAX) spinner_phase = 0;
+    else spinner_phase++;
 }
 
 void disp_ch_swap(bool is_swap) {
@@ -152,7 +217,7 @@ void disp_draw_home_top() {
     sprintf(buf, "%c%.1X  %c%.1X  %c%1.X %.4X", vol_a_top, lv_a, vol_b_top, lv_b, vol_c_top, lv_c, env);
     lcd.setCursor(0, 0);
     lcd.print(buf);
-    lcd.write(midi_in_sts ? CHAR_ICON_IN_ON : CHAR_ICON_IN_OFF);
+    lcd.write(CHAR_SPINNER);
 }
 
 void disp_draw_home_bottom() {
@@ -166,14 +231,15 @@ void disp_draw_home_bottom() {
     char vol_b_bot = (b_bar <= 8) ? CHAR_ICON_BAR_LUT[b_bar] : CHAR_ICON_BAR_LUT[8];
     char vol_c_bot = (c_bar <= 8) ? CHAR_ICON_BAR_LUT[c_bar] : CHAR_ICON_BAR_LUT[8];
 
-    sprintf(buf, "%c%.3X%c%.3X%c%.3X %.2X%c", vol_a_bot, tone_a, vol_b_bot, tone_b, vol_c_bot, tone_c, noise, is_chswap ? CHAR_ICON_CHSWAP : CHAR_ICON_NO_CHSWAP);
+    sprintf(buf, "%c%.3X%c%.3X%c%.3X %.2X", vol_a_bot, tone_a, vol_b_bot, tone_b, vol_c_bot, tone_c, noise);
     lcd.setCursor(0, 1);
     lcd.print(buf);
+    lcd.write(is_chswap ? CHAR_ICON_CHSWAP : CHAR_ICON_NO_CHSWAP);
 }
 
 void disp_tick() {
     unsigned long time = millis();
-   if(!lcd.busy() && time % 16 == 0 && time != last_millis)  {
+   if(!lcd.busy() && time % 16 == 0)  {
         uint8_t lv_a = status_regi_get_blocking(AY_REGI_LVL_A) & 0x0F;
         if(a_bar < lv_a) a_bar ++; 
         else if(a_bar > lv_a) a_bar --;
@@ -187,9 +253,10 @@ void disp_tick() {
         else if(c_bar > lv_c) c_bar --;
 
         if(msg_dur == 0) {
+            if(time != last_millis) disp_spinner_update(false);
             disp_draw_home_top();
             disp_draw_home_bottom();
-        } else {
+        } else if (time != last_millis) {
             msg_dur--;
         }
 
@@ -208,10 +275,8 @@ void disp_begin() {
     #endif
     disp_intro();
 
-    lcd.createChar(CHAR_ICON_IN_OFF, IN_ICON_OFF);
-    lcd.flush();
-    lcd.createChar(CHAR_ICON_IN_ON, IN_ICON_ON);
-    lcd.flush();
+    disp_spinner_update(true);
+
     lcd.createChar(CHAR_ICON_CHSWAP, MODE_ICON_ACB);
     lcd.flush();
     for(int i = 0; i < 5; i++) {
