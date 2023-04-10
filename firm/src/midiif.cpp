@@ -88,6 +88,7 @@ inline void handle_3rdparty_sysex(byte* array, unsigned size) {
         // So it's a good idea to shut up the AY now
         inf_log(F("FD1 Stop Sysex!!"));
         ay_reset();
+        disp_stop_msg();
     }
 }
 
@@ -163,15 +164,52 @@ void midi_on_sysex(byte* array, unsigned size) {
         case ayymidi_cmd_num_t::WRITE_PAIR:
             {
                 uint8_t regi = (ayymidi_pkt[pkt_ptr] & 0b00011110) >> 1;
-                uint8_t valu = (ayymidi_pkt[pkt_ptr] & 0b00000001) << 7;
-                pkt_ptr ++;
-                valu |= ayymidi_pkt[pkt_ptr] & 0x7F;
+                if(regi != AY_REGI_IO_A && regi != AY_REGI_IO_B) {
+                    uint8_t valu = (ayymidi_pkt[pkt_ptr] & 0b00000001) << 7;
+                    pkt_ptr ++;
+                    valu |= ayymidi_pkt[pkt_ptr] & 0x7F;
 
-                if(chswap_active) {
-                    remap_channels_in_place(&regi, &valu);
+                    if(chswap_active) {
+                        remap_channels_in_place(&regi, &valu);
+                    }
+                    dbg_log(F("MIDI I/F WRITE_PAIR: Reg=%01x Val=%02x"), regi, valu);
+                    ay_out(regi, valu);
+                } else if (regi == AY_REGI_IO_A) {
+                    // unused register IO-A: show text
+                    // value: time
+                    uint8_t time_seconds = (ayymidi_pkt[pkt_ptr] & 0b00000001) << 7;
+                    pkt_ptr ++;
+                    time_seconds |= ayymidi_pkt[pkt_ptr] & 0x7F;
+                    pkt_ptr ++;
+                    // extra data: string (NUL terminated) for line 1
+                    const char * str1 = (const char*) (ayymidi_pkt + pkt_ptr);
+                    size_t len1 = strlen(str1);
+                    pkt_ptr += len1;
+                    pkt_ptr ++;
+                    // extra data: string (NUL terminated) for line 2
+                    const char * str2 = (const char*) (ayymidi_pkt + pkt_ptr);
+                    size_t len2 = strlen(str2);
+                    pkt_ptr += len2;
+                    pkt_ptr ++;
+                    disp_show_msg(time_seconds * 1000, str1, str2);
+                } else if (regi == AY_REGI_IO_B) {
+                    // unused register IO-B: reserved
+                    Serial.println("IO-B");
+                    pkt_ptr ++;
                 }
-                dbg_log(F("MIDI I/F WRITE_PAIR: Reg=%01x Val=%02x"), regi, valu);
-                ay_out(regi, valu);
+            }
+            break;
+
+        case ayymidi_cmd_num_t::SIDFX:
+            {
+                uint8_t channel = (ayymidi_pkt[pkt_ptr] & 0b00011000) >> 3;
+                uint8_t enable = (ayymidi_pkt[pkt_ptr] & 0b00000001);
+
+                if(!enable) {
+                    sidfx_stop();
+                } else {
+                    sidfx_start(channel);
+                }
             }
             break;
         }

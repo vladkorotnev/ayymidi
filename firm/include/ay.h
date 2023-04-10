@@ -6,6 +6,13 @@ void ay_reset();
 void ay_out(uint8_t port, uint8_t data);
 void ay_set_clock(uint32_t clock);
 
+#define AY_CH_A 0
+#define AY_CH_B 1
+#define AY_CH_C 2
+
+void sidfx_start(uint8_t channel);
+void sidfx_stop();
+
 #define AY_REGI_TONE_A_FINE 0x0
 #define AY_REGI_TONE_A_COARSE 0x1
 #define AY_REGI_TONE_B_FINE 0x2
@@ -19,5 +26,8 @@ void ay_set_clock(uint32_t clock);
 #define AY_REGI_LVL_C 0xA
 #define AY_REGI_ENV_FINE 0xB
 #define AY_REGI_ENV_ROUGH 0xC
+#define AY_REGI_ENV_SHAPE 0xD
+#define AY_REGI_IO_A 0xE
+#define AY_REGI_IO_B 0xF
 
 #endif

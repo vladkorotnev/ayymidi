@@ -7,6 +7,7 @@
 #define MIDIIF_BAUD 31250
 
 typedef enum ayymidi_cmd_num {
+    SIDFX = 0b01,
     WRITE_PAIR = 0b10,
     SET_CLOCK = 0b11
 } ayymidi_cmd_num_t;
