@@ -83,80 +83,80 @@ static int spinner_phase = 0;
 static int old_spinner_phase = 0;
 PROGMEM const char ICON_SPINNER_FRAMES[] = { 
     0b00000,
-    0b10100,
-    0b00000,
-    0b10001,
-    0b00000,
-    0b10101,
-    0b00000,
-    0b00000,
-
-    0b00000,
-    0b10101,
-    0b00000,
-    0b10000,
-    0b00000,
-    0b10101,
-    0b00000,
-    0b00000,
-
-    0b00000,
-    0b10101,
-    0b00000,
-    0b10001,
-    0b00000,
-    0b10100,
-    0b00000,
-    0b00000,
-
-    0b00000,
-    0b10101,
-    0b00000,
-    0b10001,
-    0b00000,
-    0b10001,
-    0b00000,
-    0b00000,
-
-    0b00000,
-    0b10101,
-    0b00000,
-    0b10001,
-    0b00000,
-    0b00101,
-    0b00000,
-    0b00000,
-
-    0b00000,
-    0b10101,
-    0b00000,
+    0b00011,
     0b00001,
     0b00000,
-    0b10101,
+    0b00000,
+    0b00000,
     0b00000,
     0b00000,
 
     0b00000,
-    0b00101,
     0b00000,
-    0b10001,
+    0b00001,
+    0b00001,
+    0b00001,
     0b00000,
-    0b10101,
     0b00000,
     0b00000,
 
     0b00000,
-    0b10001,
     0b00000,
-    0b10001,
     0b00000,
-    0b10101,
+    0b00000,
+    0b00001,
+    0b00011,
+    0b00000,
+    0b00000,
+
+    0b00000,
+    0b00000,
+    0b00000,
+    0b00000,
+    0b00000,
+    0b01110,
+    0b00000,
+    0b00000,
+
+    0b00000,
+    0b00000,
+    0b00000,
+    0b00000,
+    0b10000,
+    0b11000,
+    0b00000,
+    0b00000,
+
+    0b00000,
+    0b00000,
+    0b10000,
+    0b10000,
+    0b10000,
+    0b00000,
+    0b00000,
+    0b00000,
+
+    0b00000,
+    0b11000,
+    0b10000,
+    0b00000,
+    0b00000,
+    0b00000,
+    0b00000,
+    0b00000,
+
+    0b00000,
+    0b01110,
+    0b00000,
+    0b00000,
+    0b00000,
+    0b00000,
     0b00000,
     0b00000,
  };
 
 void disp_spinner_update(bool sync) {
-    if(spinner_phase >= SPINNER_PHASES_MAX) spinner_phase = 0;
+    if(spinner_phase > SPINNER_PHASES_MAX) spinner_phase = 0;
     lcd.createChar(CHAR_SPINNER, &ICON_SPINNER_FRAMES[spinner_phase * 8]);
     if(sync) lcd.flush();
     old_spinner_phase = spinner_phase;
@@ -275,7 +275,6 @@ void disp_begin() {
     #endif
     disp_intro();
 
-    disp_spinner_update(true);
 
     lcd.createChar(CHAR_ICON_CHSWAP, MODE_ICON_ACB);
     lcd.flush();
