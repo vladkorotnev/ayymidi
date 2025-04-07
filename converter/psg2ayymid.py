@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os, sys, pdb, struct
+import os, sys, pdb, struct, math
 from argparse import ArgumentParser
 from ayymidi.mid_writer import AyyMidiWriter
 
@@ -12,11 +12,20 @@ from ayymidi.mid_writer import AyyMidiWriter
 # let BPM=120, PPQ=50
 # TICK = 60000 / (50*120) = 10ms
 
+#SHABON
+# PSG_TIMEBASE = 24
+# PSG_TEMPO = 118
+# PSG_CLOCK = 1750000
+# TICKS_IN_FF_COMMAND = 2
+# TICKS_IN_MULTIPLE_COMMAND = 8
+# TIMESTRETCH = 0.5
+
 PSG_TIMEBASE = 50
 PSG_TEMPO = 120
 PSG_CLOCK = 1750000
 TICKS_IN_FF_COMMAND = 2
 TICKS_IN_MULTIPLE_COMMAND = 8
+TIMESTRETCH = 1.0
 
 parser = ArgumentParser(prog='PSG2AYYMidi', description="Converts PSG of AY-3-8910 to MID for playback with FD-1 + AYYMIDI")
 parser.add_argument('--acb', dest='is_acb', action='store_true', default=False, help='Write ACB stereo flag (instead of ABC)')
@@ -52,7 +61,7 @@ accum = []
 def put_accum():
     global accum
     if len(accum) >= 2:
-        WRITER.writeRegisterChangeAccumulator(accum, timestamp)
+        WRITER.writeRegisterChangeAccumulator(accum, math.ceil(timestamp*TIMESTRETCH))
         accum = []
 
 while not eos and pos < len(INDAT):
